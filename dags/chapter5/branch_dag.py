@@ -1,8 +1,8 @@
 import random
 
 from airflow import DAG
-from airflow.exceptions import AirflowSkipException
 from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.latest_only import LatestOnlyOperator
 from airflow.operators.python import PythonOperator, BranchPythonOperator
 from airflow.utils.dates import days_ago
 
@@ -76,21 +76,9 @@ with DAG(
       python_callable=_deploy,
   )
 
-
-  def _latest_only(**context):
-    dag = context['dag']
-    dag_run = context['dag_run']
-    print("last_execution_date:", dag.latest_execution_date)
-    print("logical_date:", dag_run.logical_date)
-
-    if dag.latest_execution_date != dag_run.logical_date:
-      raise AirflowSkipException("Not the latest DAG run. Skipping.")
-    print("This is the latest DAG run. Proceeding.")
-
-
-  latest_only = PythonOperator(
+  latest_only = LatestOnlyOperator(
       task_id='latest_only',
-      python_callable=_latest_only,
+      dag=dag
   )
 
   start_dag >> [pick_version, fetch_weather]
