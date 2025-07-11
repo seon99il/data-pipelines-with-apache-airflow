@@ -1,6 +1,7 @@
 import random
 
 from airflow import DAG
+from airflow.exceptions import AirflowSkipException
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python import PythonOperator, BranchPythonOperator
 from airflow.utils.dates import days_ago
@@ -8,7 +9,7 @@ from airflow.utils.dates import days_ago
 with DAG(
     dag_id="branch_dag",
     start_date=days_ago(3),
-    schedule_interval=None,
+    schedule_interval='@daily',
     catchup=False
 ) as dag:
   fetch_sales_v1 = PythonOperator(
@@ -67,15 +68,29 @@ with DAG(
 
 
   def _deploy(**context):
-    if context['execution_date'].year < 2025:
-      print("Skipping deployment for execution date before 2025.")
-    else:
-      print("Deploying the DAG...")
+    print("Deploying the DAG...")
 
 
   deploy = PythonOperator(
       task_id='deploy',
       python_callable=_deploy,
+  )
+
+
+  def _latest_only(**context):
+    dag = context['dag']
+    dag_run = context['dag_run']
+    print("last_execution_date:", dag.latest_execution_date)
+    print("logical_date:", dag_run.logical_date)
+
+    if dag.latest_execution_date != dag_run.logical_date:
+      raise AirflowSkipException("Not the latest DAG run. Skipping.")
+    print("This is the latest DAG run. Proceeding.")
+
+
+  latest_only = PythonOperator(
+      task_id='latest_only',
+      python_callable=_latest_only,
   )
 
   start_dag >> [pick_version, fetch_weather]
@@ -85,3 +100,4 @@ with DAG(
   fetch_weather >> clean_weather
   [clean_sales_v1, clean_sales_v2] >> picked_version
   [picked_version, clean_weather] >> notify >> deploy
+  latest_only >> deploy

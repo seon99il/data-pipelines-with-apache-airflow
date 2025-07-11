@@ -18,6 +18,11 @@
 >
 > 템플릿을 사용하여 변수를 동적으로 할당해 데이터 증분 처리가 가능
 
+- **execution_date - DAG가 실행되는 시점의 날짜와 시간을 나타냅니다.**
+
+이전에 실패한 task를 `clear` 명령어로 재실행하거나 이전 날짜의 task를 backfill 해도
+execution_date는 변경되지 않습니다.
+
 ## CHAPTER 4 Airflow 콘텍스트를 사용하여 태스크 템플릿 작업하기
 
 > 오퍼레이터의 일부 인수는 템플릿화할 수 있습니다.
@@ -61,5 +66,26 @@ check_execution_date 태스크는 자기 실행 시점 기준의 context만 사�
 `none_failed` - 상위 태스크 모두 실행 완료 및 실패가 없다면, 실행
 
 ### 조건부 태스크
+
 > Airflow는 특정 조건에 따라 DAG에 특정 태스크를 건너뛸 수 있습니다.
+
+- 태스크 내에서 조건
+
+> if 문을 사용하여 특정 조건을 만족할 때만 작업을 수행하도록 설정할 수 있습니다.
+
+**cons**
+
+- 로직 조건이 혼용되며, `PythonOperator` 외에 다른 오퍼레이터에서는 사용 불가
+- Airflow UI에서 조건부 태스크를 시각적으로 표현하기 어려움
+
+**TO BE**
+
+- **조건부 태스크 만들기**
+
+정의된 조건에 따라 실행되는 테스크를 정의하며 [condition, task1] > after_task 형태로 의존성 정의
+
+`raise AirflowSkipException()` - 특정 조건을 만족하지 않을 때 태스크를 건너뛰도록 설정
+
+_`AirflowSkipExcetion`으로 Sikp 시에도 skipped 상태로 처리되기 때문에 `trigger_rule='none_failed'`로 설정되있다면 실행됨_
+
 
