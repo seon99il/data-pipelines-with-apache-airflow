@@ -37,3 +37,14 @@ Airflow는 각 태스크를 **독립된 실행 단위 (task instance)**로 보�
 print_context 태스크에서 `context['execution_date'] = ...` 를 바꿔도,
 check_execution_date 태스크는 자기 실행 시점 기준의 context만 사용합니다.
 
+## CHAPTER 5 Airflow의 태스크 의존성
+>
+> 
+
+### Airflow Trigger Roles
+Airflow는 `trigger_rule` 인수를 이용해 개별 태스크에 대해 트리거 규칙을 정의합니다.
+
+`all_success` - 모든 상위 태스크가 성공해야 해당 태스크를 실행할 수 있음
+
+`none_failed` - 상위 태스크 모두 실행 완료 및 실패가 없다면, 실행
+
