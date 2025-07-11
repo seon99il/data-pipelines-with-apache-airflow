@@ -61,13 +61,29 @@ check_execution_date 태스크는 자기 실행 시점 기준의 context만 사�
 
 **Airflow는 `trigger_rule` 인수를 이용해 개별 태스크에 대해 트리거 규칙을 정의합니다.**
 
-`all_success` - 모든 상위 태스크가 성공해야 해당 태스크를 실행할 수 있음
+`all_success (default)` - 모든 상위 태스크가 성공해야 해당 태스크를 실행할 수 있음
 
-`none_failed` - 상위 태스크 모두 실행 완료 및 실패가 없다면, 실행
+`all_failed` - 모든 상위 태스크가 실패해야 해당 태스크를 실행할 수 있음
+
+`all_done` - 상위 태스크 모두 실행 완료 여부와 관계없이 실행
+
+`one_success` - 상위 태스크 중 하나라도 성공하면 실행
+
+`one_failed` - 상위 태스크 중 하나라도 실패하면 실행
+
+`none_failed` - 상위 태스크 모두 실행 완료 또는 스킵, 실패가 없다면 실행
+
+`none_skipped` - 상위 태스크 모두 실행 완료 또는 실패, 스킵이 없다면 실행
+
+`dummy` - 업스트림 태스크의 상태와 관계없이 항상 실행
 
 ### 조건부 태스크
 
 > Airflow는 특정 조건에 따라 DAG에 특정 태스크를 건너뛸 수 있습니다.
+>
+> raise AirflowSkipException()을 사용하여 특정 조건을 만족하지 않을 때 태스크를 건너뛰도록 설정하며,
+>
+> [condition, task1] > after_task 형태로 의존성을 정의하여 condition을 만족할 때만 실행하도록 만들 수 있음.
 
 - 태스크 내에서 조건
 
