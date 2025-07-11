@@ -49,6 +49,11 @@ with DAG(
       provide_context=True,
   )
 
+  picked_version = DummyOperator(
+      task_id="selected_sales_version",
+      trigger_rule='none_failed'
+  )
+
   notify = PythonOperator(
       task_id="notify",
       trigger_rule="none_failed",
@@ -60,9 +65,23 @@ with DAG(
       dag=dag,
   )
 
+
+  def _deploy(**context):
+    if context['execution_date'].year < 2025:
+      print("Skipping deployment for execution date before 2025.")
+    else:
+      print("Deploying the DAG...")
+
+
+  deploy = PythonOperator(
+      task_id='deploy',
+      python_callable=_deploy,
+  )
+
   start_dag >> [pick_version, fetch_weather]
   pick_version >> [fetch_sales_v1, fetch_sales_v2]
   fetch_sales_v1 >> clean_sales_v1
   fetch_sales_v2 >> clean_sales_v2
   fetch_weather >> clean_weather
-  [clean_sales_v1, clean_sales_v2, clean_weather] >> notify # 3개의 fan-in이 notify에 연결됨, notify에 플로 특성이 잘 반영되지 않게 됨
+  [clean_sales_v1, clean_sales_v2] >> picked_version
+  [picked_version, clean_weather] >> notify >> deploy
