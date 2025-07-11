@@ -44,8 +44,9 @@ check_execution_date 태스크는 자기 실행 시점 기준의 context만 사�
 
 ## CHAPTER 5 Airflow의 태스크 의존성
 
->
->
+> Airflow DAG에서 선형 또는 Fan-in/out 구조를 정의할 수 있음
+> BranchPythonOperator를 사용하여 DAG의 실행 경로를 동적으로 결정할 수 있음 (실행할 taskId를 return)
+> 조건부 태스크를 사용하여 특정 조건에 따라 DAG에 특정 태스크를 건너뛸 수 있음
 
 ### Branching
 
@@ -129,3 +130,11 @@ context['ti'].xcom_pull(
 - **key를 생략한 경우**
 
   기본키 return_value를 사용하여 가져오게 됨
+
+### TaskFlow API
+
+> Airflow2는 Taskflow API를 통해 파이썬 태스크 및 의존성을 정의하기 위한 새로운 Decorator 기반 API를 제공합니다.
+
+- Taskflow 유형 태스크 간에 전달된 데이터는 XCom을 통해 자동 공유되며, XCom의 제약사항이 적용됨
+- PythonOperator를 사용하여 구현되는 태스크에만 사용할 수 있음
+- 다른 오퍼레이터와 함께 사용 시 의존성을 정의하는 부분에서 직관적이지 못할 수 있음
