@@ -17,6 +17,8 @@
 > 하나의 스케줄 간격 작업은 해당 주기의 작업이 끝나면 시작
 >
 > 템플릿을 사용하여 변수를 동적으로 할당해 데이터 증분 처리가 가능
+>
+> @daily, timedelta, cron
 
 - **execution_date - DAG가 실행되는 시점의 날짜와 시간을 나타냅니다.**
 
@@ -138,3 +140,56 @@ context['ti'].xcom_pull(
 - Taskflow 유형 태스크 간에 전달된 데이터는 XCom을 통해 자동 공유되며, XCom의 제약사항이 적용됨
 - PythonOperator를 사용하여 구현되는 태스크에만 사용할 수 있음
 - 다른 오퍼레이터와 함께 사용 시 의존성을 정의하는 부분에서 직관적이지 못할 수 있음
+
+## CHAPTER 6 워크플로 트리거
+
+>
+>
+>
+
+### 센서를 사용한 폴링 조건
+
+> 새로운 데이터가 도착 시 워크플로를 시작하는 방법
+
+기존에 시간 간격을 기준으로 워크플로를 실행 시 데이터 전달 시간과 워크플로의 시작 시간 사이의 대기가 발생할 수 있음
+
+> Airflow 오퍼레이터의 특수 타입(서브 클래스)인 센서의 도움을 받아 해결할 수 있음
+
+- **Airflow sensor**
+
+특정 조건이 `true`인지 지속적으로 확인하고 `true`라면 성공
+
+만약 false인 경우, 센서는 상태가 `true`가 될 때까지, 타임아웃이 될 때까지 계속 확인
+
+```python
+from airflow.sensors.filesystem import FileSensor
+
+wait_for_supermarket_1 = FileSensor(
+    task_id="wait_for_supermarket_1",
+    filepath="/opt/airflow/data/supermarket1/data.csv",  # 와일드 카드 형식 지원
+)
+```
+
+- 대략 1분에 한 번씩(poke_interval) 센서는 주어진 파일이 있는지 포크(poke)합니다.
+- **Poking**: 센서를 실행하고 센서 상태를 확인하기 위해 Airflow에서 사용하는 이름
+- **Globbing**: 파일 이름과 경로 이름의 패턴과 일치시킬 수 있는 기능
+
+### Sensor의 타임아웃
+
+기본적으로 센서 타임아웃은 7일로 설정되어 있으며, schedule_interval을 하루로 설정하면,
+
+눈덩이 효과가 발생할 수 있음
+
+ex.) shcedule_interval을 하루로 설정하고, 센서 타임아웃을 7일로 설정
+
+- 2025-07-10에 sensor instance가 시작
+- 2025-07-11에 sensor instance가 시작
+- 2025-07-11에 데이터가 들어옴 -> snsror instance 2개 모두 true를 반환하며 2번 실행됨
+
+_*task_id등으로 멱등성을 보장해주지 않음_
+
+**sensor mode**
+
+poke: 대기 시간마다 포크를 수행한 후 아무 동작도 하지 않지만, 태스크 슬롯을 차지
+
+reschedule: 대기 시간마다 포크를 수행하고, 태스크 슬롯을 차지하지 않음
