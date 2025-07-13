@@ -280,4 +280,57 @@ curl -u <username>:<password> -X POST http://localhost:8080/api/v1/dags/<dag_id>
 -H "Content-Type: application/json" -d '{"conf": {"key": "value"}}'
 ```
 
+## CHAPTER 7 외부 시스템과 통신하기
 
+> 외부시스템: Airflow 및 Airflow가 구동되는 시스템 이외의 모든 기술 (S3, Spark, BigQuery)
+>
+> 외부 시스템의 오퍼레이터는 특정 시스템의 클라이언트를 호출하여 기능을 노출
+>
+> 로컬 머신에서 외부 서비스에 액세스할 수 있는 경우 `airflow tasks test <dag_id> <task_id> <execution_date>`
+> 를 사용하여 태스크를 태스트 할 수 있음(Sensor의 경우 poke를 한 번만 수행하고 종료됨)
+>
+> BaseOperator를 상속받아 오퍼레이터를 구현할 수 있으며, 훅을 사용하여 외부 시스템과 통신할 수 있습니다.
+
+- S3CopyObjectOperator: S3 버킷 간에 객체를 복사하는 오퍼레이터
+
+```python
+from airflow.providers.amazon.aws.operators.s3 import S3CopyObjectOperator
+
+download_mnist_data = S3CopyObjectOperator(
+    task_id="download_mnist_data",
+    source_bucket_name="source-bucket",  # From S3 버킷 이름
+    source_bucket_key="mnist-data.zip",  # From File 경로
+    dest_bucket_name="destination-bucket",  # To S3 버킷 이름
+    dest_bucket_key="mnist-data.zip",  # To File 경로
+    aws_conn_id="aws_default",  # AWS 연결 ID (Airflow Web UI에서 설정한 연결 ID)
+)
+```
+
+- 특정 Task를 execution_date에 CLI로 실행할 수 있음
+
+```bash
+airflow tasks test <dag_id> <task_id> <execution_date>
+```
+
+_*Task가 Sensor인 경우, 한 번만 Poke를 수행하고 종료됨_
+
+### 시스템 간 데이터 이동하기
+
+> Airflow의 일반적인 사용 사례는 정기적인 ETL작업으로, 데이터를 다운하고 다른 곳으로 변환합니다.
+>
+> Airflow는 A-to-B 오퍼레이터를 사용할 수 있음 (`SFTPToS3Operator`, `MongoToS3Operator`)
+
+- **MongoToS3Operator**: MongoDB에서 S3로 데이터를 이동하는 오퍼레이터
+
+`MongoDB -> Airflow Memory -> S3` 방식이며, 메모리가 부족해질 수 있음
+
+### 큰 작업을 외부에서 수행하기
+
+> 오퍼레이터들은 종종 Airflow와 같은 파이썬 런타임에서 실행됨
+>
+> 대규모 데이터 처리 작업의 경우 AIrflow에서 실제 작업을 하는 대신, Apache Spark와 같은 처리 시스템에 작업을 위임하며,
+> Airflow는 작업을 트리거하고 모니터링하는 역할을 수행할 수 있음
+
+- SparkSubmitOperator: Apache Spark 작업을 제출하는 오퍼레이터
+- SSHOperator: SSH를 통해서 Spark 작업을 실행
+- SimpleHTTPOperator: HTTP 요청을 통해서 Livy(Spark REST API)를 호출하여 Spark 작업을 실행
