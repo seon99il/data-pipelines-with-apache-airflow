@@ -10,16 +10,15 @@ with DAG(
     schedule_interval=None,
     catchup=False,
 ) as dag:
-  @task
-  def train_model(**context):
-    model_id = str(uuid.uuid4())
-    return model_id
 
+    @task
+    def train_model(**context):
+        model_id = str(uuid.uuid4())
+        return model_id
 
-  @task
-  def deploy_model(model_id):
-    print("model_id: ", model_id)
+    @task
+    def deploy_model(model_id):
+        print("model_id: ", model_id)
 
-
-  model_id = train_model()
-  deploy_model(model_id)
+    model_id = train_model()
+    deploy_model(model_id)

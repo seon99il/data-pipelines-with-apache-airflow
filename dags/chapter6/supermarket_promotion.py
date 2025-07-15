@@ -14,17 +14,20 @@ start_date = datetime.now() - timedelta(days=3)
 
 
 def process_supermarket(**context):
-  print("Processing data for supermarket:",
-        str(context['dag_run'].conf.get('supermarket_id')))
+    print(
+        "Processing data for supermarket:",
+        str(context["dag_run"].conf.get("supermarket_id")),
+    )
 
 
 def wait_for_supermarket(**context):
-  supermarket_path = Path(
-      "/opt/airflow/data/" + str(context['dag_run'].conf.get('supermarket_id')))
-  data_files = supermarket_path.glob("data-*.csv")
-  success_file = supermarket_path / "_SUCCESS.txt"
+    supermarket_path = Path(
+        "/opt/airflow/data/" + str(context["dag_run"].conf.get("supermarket_id"))
+    )
+    data_files = supermarket_path.glob("data-*.csv")
+    success_file = supermarket_path / "_SUCCESS.txt"
 
-  return data_files and success_file.exists()
+    return data_files and success_file.exists()
 
 
 with DAG(
@@ -32,23 +35,23 @@ with DAG(
     start_date=start_date,
     schedule_interval=None,
     catchup=False,
-    concurrency=50
+    concurrency=50,
 ) as dag:
-  wait_for_supermarket = PythonSensor(
-      task_id="wait_for_supermarket",
-      python_callable=wait_for_supermarket,
-      mode="reschedule",
-  )
+    wait_for_supermarket = PythonSensor(
+        task_id="wait_for_supermarket",
+        python_callable=wait_for_supermarket,
+        mode="reschedule",
+    )
 
-  process_supermarket = PythonOperator(
-      task_id="process_supermarket",
-      python_callable=process_supermarket,
-  )
+    process_supermarket = PythonOperator(
+        task_id="process_supermarket",
+        python_callable=process_supermarket,
+    )
 
-  create_metrics = PythonOperator(
-      task_id="create_metrics",
-      python_callable=lambda: print("Creating metrics..."),
-      dag=dag,
-  )
+    create_metrics = PythonOperator(
+        task_id="create_metrics",
+        python_callable=lambda: print("Creating metrics..."),
+        dag=dag,
+    )
 
-  wait_for_supermarket >> process_supermarket >> create_metrics
+    wait_for_supermarket >> process_supermarket >> create_metrics
