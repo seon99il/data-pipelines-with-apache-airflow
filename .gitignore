@@ -1,5 +1,7 @@
 .idea/
-/logs/
+src/logs/
 .DS_Store
 __pycache__/
 .vscode/
+
+.venv/

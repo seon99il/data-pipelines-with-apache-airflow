@@ -20,7 +20,6 @@ dag2 = DAG(
 
 (
     DummyOperator(task_id="copy_to_raw", dag=dag1)
-    >> DummyOperator(task_id="process_supermarket", dag=dag1)
 )
 
 wait = ExternalTaskSensor(
