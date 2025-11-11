@@ -27,7 +27,7 @@ with DAG(
         input_path = (
             context['"templates_dict']["input_path"] | "/data/events/{{ds}}.json"
         )
-        output_path = context["templates_dict"]["output_path"]
+        output_path = context["templates_dict"]["_output_path"]
         events = pd.read_json(input_path)
         stats = events.groupby(["date", "user"]).size().reset_index()
         Path(output_path).parent.mkdir(exist_ok=True)
@@ -38,7 +38,7 @@ with DAG(
         python_callable=_calculate_stats,
         op_kwargs={
             "input_path": "/data/events/{{ds}}.json",
-            "output_path": "/data/stats/{{ds}}.csv",
+            "_output_path": "/data/stats/{{ds}}.csv",
         },
         dag=dag,
     )

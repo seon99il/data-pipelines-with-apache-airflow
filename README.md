@@ -334,3 +334,49 @@ _*Task가 Sensor인 경우, 한 번만 Poke를 수행하고 종료됨_
 - SparkSubmitOperator: Apache Spark 작업을 제출하는 오퍼레이터
 - SSHOperator: SSH를 통해서 Spark 작업을 실행
 - SimpleHTTPOperator: HTTP 요청을 통해서 Livy(Spark REST API)를 호출하여 Spark 작업을 실행
+
+## CHAPTER 8 커스텀 컨포넌트 빌드
+
+> Airflow Operator가 제공하지 않는 기능을 모두 PythonOperator로 구현할 수 있지만, 재사용성이 떨어짐  
+> 커스텀 오퍼레이터를 직접 쉽게 구현해 생성할 수 있으며, 이를 이용하여 지원되지 않는 시스템에서 작업을 실행할 수 있음
+
+```shell
+sh ./scripts/run_chapter8_api.sh # Movie API 실행
+```
+
+### - Hook
+
+> Airflow에서 Hook은 외부 시스템과의 연결(Conn)을 관리하는 역할을 합니다.
+
+- get_conn 메서드가 public이지만, 훅 외부에서 직접사용 시 외부 시스템에 액세스할 때 필요한 자세한 내부 사항을 처리하기 때문에
+  이 메서드를 외부에 노출하면 캡슐화가 깨질 수 있음
+
+### Operator
+
+> BaseOperator 클래스를 상속하여 구현할 수 있음 (execute 메서드 오버라이드)
+
+`@apply_defaults`: _이전의 DAG에 정의된 default_args를 오퍼레이터에 적용할 수 있도록 도와주는 데코레이터 (Deprecated)_
+
+**원격 시스템을 포함하는 오퍼레이터**: Conn_id와 start, end, query 등을 일반적으로 포함
+
+`template_fields = ("_start_date", "_end_date", "_output_path")`
+- template_fields가 없으면 Jinja 템플릿({{ ds }} 같은 매크로)을 쓸 수 없음
+
+- PytonOperator - op_args, op_kwargs, templates_dict 모두 template_fields에 포함되어 있음  
+`template_fields: Sequence[str] = ("templates_dict", "op_args", "op_kwargs")`  
+**op_kwargs**: 함수 인자와 1:1 대응을 원할 때  
+**templates_dict**: **“템플릿 파일/리소스 전달용”**이라는 의미를 명확히 하고 싶을 때 사용
+
+### 컴포넌트 패키징하기
+
+> DAG에 커스텀 컴포넌트를 DAG 디렉터리 내에 있는 서브 패키지까지 포함했음  
+> 하지만 이 방식은 다른 프로젝트에 사용하거나 공유할 경우, 이상적인 방법은 아님
+
+- **더 나은 방법은 파이썬 패키지에 코드를 넣는 것**
+
+이 경우 설정 시 약간의 작업이 더 필요하지만, Airflow 구성 환경에 커스텀 컨포넌트를 설치할 때에  
+다른 패키지와 비슷한 방법으로 작업할 수 있다는 장점이 있음
+
+_**목적: 구현한 훅, 오퍼레이터, 센서 클래스를 포함하는 airflow_movielens라는 패키지를 생성하는 것**_
+
+

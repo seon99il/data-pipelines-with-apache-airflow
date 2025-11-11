@@ -1,8 +1,8 @@
 from datetime import timedelta, datetime
 
 from airflow import DAG
-from airflow.operators.dummy_operator import DummyOperator
 from airflow.sensors.external_task import ExternalTaskSensor
+from airflow.operators.bash import BashOperator
 
 dag1 = DAG(
     dag_id="external_task_sensor_target",
@@ -19,7 +19,7 @@ dag2 = DAG(
 )
 
 (
-    DummyOperator(task_id="copy_to_raw", dag=dag1)
+    BashOperator(task_id="copy_to_raw", dag=dag1, bash_command="echo 'Copying data to raw layer...'")
 )
 
 wait = ExternalTaskSensor(
@@ -29,7 +29,7 @@ wait = ExternalTaskSensor(
     dag=dag2,
 )
 
-report = DummyOperator(task_id="report", dag=dag2)
+report = BashOperator(task_id="report", dag=dag2, bash_command="echo 'Data processing completed. Generating report...'")
 
 wait >> report
 

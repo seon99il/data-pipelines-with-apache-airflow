@@ -39,7 +39,7 @@ with DAG(
             "month": "{{ execution_date.month }}",
             "day": "{{ execution_date.day }}",
             "hour": "{{ execution_date.hour }}",
-            "output_path": "/tmp/wikipageviews.gz",
+            "_output_path": "/tmp/wikipageviews.gz",
         },
     )
 

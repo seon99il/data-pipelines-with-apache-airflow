@@ -1,7 +1,7 @@
 import random
 
 from airflow import DAG
-from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.bash import BashOperator
 from airflow.operators.latest_only import LatestOnlyOperator
 from airflow.operators.python import PythonOperator, BranchPythonOperator
 from airflow.utils.dates import days_ago
@@ -50,8 +50,10 @@ with DAG(
         provide_context=True,
     )
 
-    picked_version = DummyOperator(
-        task_id="selected_sales_version", trigger_rule="none_failed"
+    picked_version = BashOperator(
+        task_id="selected_sales_version", trigger_rule="none_failed",
+        dag=dag,
+        bash_command="echo $PWD",
     )
 
     notify = PythonOperator(
@@ -60,9 +62,10 @@ with DAG(
         python_callable=lambda: print("notify called"),
     )
 
-    start_dag = DummyOperator(
+    start_dag = BashOperator(
         task_id="start_dag",
         dag=dag,
+        bash_command="echo 'Starting the DAG...'",
     )
 
     def _deploy(**context):
