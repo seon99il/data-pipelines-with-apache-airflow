@@ -1,10 +1,13 @@
 import json
 import os.path
 from collections import defaultdict, Counter
+from datetime import datetime
 from typing import Any
 
 from airflow.models import BaseOperator
 from airflow.utils.context import Context
+from airflow.utils.session import NEW_SESSION
+from sqlalchemy.orm import Session
 
 from airflow_movielens.hooks import MovielensHook
 
@@ -107,3 +110,33 @@ class MovielensPopularityOperator(BaseOperator):
                 key=lambda x: x[1],
                 reverse=True
             )[:self._top_n]
+
+class MovielensDownloadOperator(BaseOperator):
+    template_fields = ("_start_date", "_end_date", "_output_path")
+    def __init__(self,
+        conn_id,
+        start_date: str,
+        end_date: str,
+        output_path: str,
+        **kwargs):
+        super().__init__(**kwargs)
+        self._conn_id = conn_id
+        self._start_date = start_date
+        self._end_date = end_date
+        self._output_path = output_path
+
+    def execute(self, context: Context) -> Any:
+        print(context['data_interval_start'])
+        print(context['data_interval_end'])
+        with MovielensHook(self._conn_id) as hook:
+            ratings = list(hook.get_ratings(
+                start_date=self._start_date,
+                end_date=self._end_date
+            ))
+
+        self.log.info(f"Writing ratings to {self._output_path}")
+        with open(self._output_path, "w") as f:
+                json.dump(ratings, f)
+
+
+

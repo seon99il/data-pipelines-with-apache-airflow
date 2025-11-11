@@ -482,3 +482,80 @@ pytest는 tmp_dir(os.path 객체) 및 tmp_path(pathlib 객체)라는 tempfile �
 
 ### 테스트에서 DAG 및 태스크 콘텍스트로 작업하기
 > 일부 오퍼레이터는 실행을 위해 더 많은 Context 또는 작업 Instance가 필요할 수 있음
+
+오퍼레이터 실행 단계:
+
+1. 태스크 인스턴스 콘텍스트 구성 (모든 변수를 수집)
+2. 현재 테스크 인스턴스에 대한 XCom 데이터 삭제 -> Airflow MetaStore
+3. 템플릿 변수 구체화
+4. operator.pre_execute() 호출
+5. operator.execute() 호출
+6. XCom에 값 저장 -> Airflow MetaStore
+7. operator.post_execute() 호출
+
+- 템플릿을 사용하면 태스크 인스턴스 콘텍스트를 실행해야 하므로 이전과 같이 단순히   
+  오퍼레이터의 execute 메서드를 호출하는 것만으로는 테스트할 수 없음
+
+이를 위해서 Airflow 자체에서 태스크를 시작할 때 사용하는 실제 메서드인 `operator.run()`을 호출  
+이를 사용하려면 DAG에 오퍼레이터를 할당해야 함
+
+```python
+    task.run(
+    start_date=test_dag.default_args["start_date"],
+    end_date=test_dag.default_args["start_date"],
+    ignore_ti_state=True,  # 꼭 넣어서 실행할 것
+)
+```
+
+datetime.datetime(2019, 10, 10)라면 `start_date`와 `end_date`를 동일하게 설정하여 단일 실행
+
+- context['date_interval_start'] = DateTime(2019, 10, 10, 0, 0, 0, tzinfo=Timezone('UTC'))
+- context['date_interval_end'] = DateTime(2019, 10, 11, 0, 0, 0, tzinfo=Timezone('UTC'))
+
+start: datetime.datetime(2019, 10, 10) / end: datetime.datetime(2019, 10, 11)로 잡으면?
+10일부터 11일 사이에 execution_date가 (10일, 11일) 2개가 존재하므로 2번 실행됨
+
+```python
+# BaseOperator.run() 내부
+for info in self.dag.iter_dagrun_infos_between(start_date, end_date, align=False):
+```
+
+에 따라서 2번 실행
+
+- Task1
+    - context['date_interval_start'] = DateTime(2019, 10, 10, 0, 0, 0, tzinfo=Timezone('UTC'))
+    - context['date_interval_end'] = DateTime(2019, 10, 11, 0, 0, 0, tzinfo=Timezone('UTC'))
+
+- Task2
+    - context['date_interval_start'] = DateTime(2019, 10, 11, 0, 0, 0, tzinfo=Timezone('UTC'))
+    - context['date_interval_end'] = DateTime(2019, 10, 12, 0, 0, 0, tzinfo=Timezone('UTC'))
+
+### DAG 완료 테스트하기
+
+DAG의 모든 오퍼레이터가 예상한 대로 작동하려면 어떻게 해야할까요?  
+A: 다양한 이유로 실제 환경을 시뮬레이션하는 것이 항상 가능하지 않음, 프로덕션 환경에서 데이터 크기를 고려하면  
+DTAP (Dev, Test, Acceptance, Prod) 환경 모두 데이터를 Sync하는 것은 비현실적임
+
+#### Whirl을 이용한 프로덕션 환경 에뮬레이션
+
+https://github.com/godatadriven/whirl
+
+#### DTAP 환경 생성
+
+> 도커를 활용한 로컬에 운영 환경을 시뮬레이션 하거나, Dev, Prod 브랜치로 관리하기
+
+### 요약
+
+- DAG 무결성 테스트는 DAG의 기본 오류를 필터링함
+- 단위 테스트를 통해 개별 오퍼레이의 정확성을 검증
+- Pytest 및 플러그인은 테스트를 위해, 임시 디렉터리, 도커 컨테이너, 목업 객체 등을 쉽게 생성할 수 있도록 도와줌
+- 태스크 인스턴스 콘텍스트를 사용하지 않는 오퍼레이터는 `execute()`로 쉽게 테스트할 수 있음
+- 태스크 인스턴스 콘텍스트를 사용하는 오퍼레이터는 DAG와 함께 실행되어야 함 (task.run())
+- 통합 테스트를 위해서는 프로덕션 환경과 최대한 비슷하게 시뮬레이션해야하며, 환경을 분리 Copy해서 관리하는 것이 중요함
+
+## CHAPTER 10 컨테이너에서 태스크 실행하기
+
+- Airflow 배포관리와 관련된 몇가지 문제를 파악하기
+- 컨테이너 접근 방식이 Airflow 배포에 어떻게 도움이 되는지 검토
+- 도커의 Airflow에서 컨테이너화된 태스크 실행학디
+- 컨테이너화된 DAG 개발에서 워크플로에 대한 전반적인 개요 수립
