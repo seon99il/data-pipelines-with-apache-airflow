@@ -25,7 +25,7 @@ class MovielensRatingsSensor(BaseSensorOperator):
         super().__init__(**kwargs)
 
     def poke(self, context: Context) -> bool:
-        from chapter8.custom.hooks import MovielensHook
+        from custom.hooks import MovielensHook
         hook = MovielensHook(conn_id=self._conn_id)
 
         self.log.info("Poking for new ratings data from %s to %s", self._start_date, self._end_date)

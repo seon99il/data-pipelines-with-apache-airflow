@@ -8,7 +8,7 @@ import requests
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
-from chapter8.custom.ranking import rank_movies_by_rating
+from custom.ranking import rank_movies_by_rating
 
 
 MOVIELENS_HOST = 'host.docker.internal'

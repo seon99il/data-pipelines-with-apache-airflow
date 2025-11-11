@@ -2,6 +2,15 @@ import airflow.utils.dates
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 
+import json
+import pathlib
+
+import requests
+
+
+
+
+
 dag = DAG(
     dag_id="download_rocket_launches",
     start_date=airflow.utils.dates.days_ago(14),

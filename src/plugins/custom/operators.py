@@ -5,7 +5,7 @@ from typing import Any
 from airflow.models import BaseOperator
 from airflow.utils.context import Context
 
-from chapter8.custom.hooks import MovielensHook
+
 
 
 class  MovielensFetchRatingsOperator(BaseOperator):
@@ -34,6 +34,7 @@ class  MovielensFetchRatingsOperator(BaseOperator):
         self._end_date:str = end_date
 
     def execute(self, context: Context) -> Any:
+        from custom.hooks import MovielensHook
         hook = MovielensHook(conn_id=self._conn_id)
 
         self.log.info("Context: " + str(context))

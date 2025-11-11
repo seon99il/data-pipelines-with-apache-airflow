@@ -7,10 +7,10 @@ import pandas as pd
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
-from chapter8.custom.hooks import MovielensHook
-from chapter8.custom.operators import MovielensFetchRatingsOperator
-from chapter8.custom.ranking import rank_movies_by_rating
-from chapter8.custom.sensors import MovielensRatingsSensor
+from custom.hooks import MovielensHook
+from custom.operators import MovielensFetchRatingsOperator
+from custom.ranking import rank_movies_by_rating
+from custom.sensors import MovielensRatingsSensor
 
 
 # pylint: disable=logging-format-interpolation

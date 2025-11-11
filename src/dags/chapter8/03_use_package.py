@@ -9,14 +9,11 @@ from airflow.operators.python import PythonOperator
 from airflow_movielens.operators import MovielensFetchRatingsOperator
 from airflow_movielens.ranking import rank_movies_by_rating
 from airflow_movielens.sensors import MovielensRatingsSensor
-from common.print_common import print_greeting
 
 
 # pylint: disable=logging-format-interpolation
 
 
-def test_package():
-    print_greeting()
 
 
 
