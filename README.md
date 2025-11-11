@@ -379,4 +379,52 @@ sh ./scripts/run_chapter8_api.sh # Movie API 실행
 
 _**목적: 구현한 훅, 오퍼레이터, 센서 클래스를 포함하는 airflow_movielens라는 패키지를 생성하는 것**_
 
+- 디렉터리 구조
 
+```
+airflow-movielens
+├── setup.py
+└── src
+    └── airflow_movielens
+        ├── __init__.py
+        ├── hooks.py
+        ├── operators.py
+        ├── ranking.py
+        └── sensors.py
+```
+
+- 설치
+
+```shell
+pythom -m install ./airflow-movielens
+```
+
+- **find_packages("src")**는 어떤 이름의 패키지(airflow_movielens)를 빌드해야 하는지 setuptools에게 알려줍니다.
+
+- **package_dir={"": "src"}**는 그 패키지들의 실제 코드가 프로젝트의 src/ 디렉토리에 있다는 위치 정보를 알려줍니다.
+
+```python
+from airflow_movielens.sensors import MovielensRatingsSensor  # 다른 package 처럼 import 가능
+
+...
+
+ratings_sensor = MovielensRatingsSensor(
+    task_id="wait_for_ratings_data",
+    filepath="/opt/airflow/data/ratings.csv",
+)
+
+...
+```
+
+`src/` 안에 package를 스캔해서 `lib/{package_name}` 형태로 설치됨
+
+`uv run pip install -e ./airflow-movielens`로 설치 시 패키지 내 코드를 수정할 때마다 자동으로 반영
+
+_pyproject.toml 파일을 사용하여 정의할 수 있음 (uv add 가능)_
+
+### 요약
+
+- 사용자는 특정 사례에 맞는 커스텀 컴포넌트를 구현하여, Airflow의 기능을 확장할 수 있음
+- 커스텀 훅을 사용하여 지원하지 않는 시스템과 연동할 수 있음
+- 개별 워크플로에 특화되거나 Airflow 기본 내장 오퍼레이터로 처리할 수 없는 컴포넌트를 구현할 수 있음
+- 커스텀한 오퍼레이터, 훅, 센서 등의 코드들을 (배포가능한) 파이썬 라이브러리로 구현하여 보다 구조적으로 만들 수 있음

@@ -1,0 +1,8 @@
+Metadata-Version: 2.4
+Name: airflow-movielens
+Version: 0.1.0
+Summary: Hooks, sensors and operators for the Movielens API.
+License: MIT License
+Requires-Python: >=3.8
+Requires-Dist: apache-airflow==2.9.1
+Requires-Dist: requests
