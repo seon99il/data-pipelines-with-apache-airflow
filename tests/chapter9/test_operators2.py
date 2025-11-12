@@ -50,8 +50,9 @@ def test_movielens_download_operator(mocker: MockerFixture, test_dag, mock_sessi
 
     task.run(
         start_date=test_dag.default_args["start_date"],
-        end_date=datetime.datetime(2019, 10, 11),
+        end_date=datetime.datetime(2019, 10, 10),
         ignore_ti_state=True,
+        ignore_first_depends_on_past=True,
     )
 
     # assert mock_execute.call_count == 1

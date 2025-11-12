@@ -530,6 +530,19 @@ for info in self.dag.iter_dagrun_infos_between(start_date, end_date, align=False
     - context['date_interval_start'] = DateTime(2019, 10, 11, 0, 0, 0, tzinfo=Timezone('UTC'))
     - context['date_interval_end'] = DateTime(2019, 10, 12, 0, 0, 0, tzinfo=Timezone('UTC'))
 
+`schedule_interval="@weekly"` 일때면? 1번 실행 (start: 2019-10-10 / end: 2019-10-11)
+
+`schedule_interval="*/10 * * * *"`(10분) 일때면? 
+
+- `context['data_interval_start'] = {DateTime} DateTime(2019, 10, 10, 0, 0, 0, tzinfo=Timezone('UTC'))`  
+  `context['data_interval_end'] = {DateTime} DateTime(2019, 10, 11, 0, 0, 0, tzinfo=Timezone('UTC'))`
+- `context['data_interval_start'] = {DateTime} DateTime(2019, 10, 10, 0, 10, 0, tzinfo=Timezone('UTC'))`  
+  `context['data_interval_end'] = {DateTime} DateTime(2019, 10, 10, 0, 20, 0, tzinfo=Timezone('UTC'))`
+- `context['data_interval_start'] = {DateTime} DateTime(2019, 10, 10, 0, 20, 0, tzinfo=Timezone('UTC'))`  
+  `context['data_interval_end'] = {DateTime} DateTime(2019, 10, 10, 0, 30, 0, tzinfo=Timezone('UTC'))`
+- _... 10분 단위로 계속 반복됨_ (`10일 00시 ~ 11일 00시`로 실행된 후 `10일 00시10분 ~ 10일 00시20`분 형태로 계속 실행)
+
+_10일00:00 부터 11일00:00실행 후 interval에 맞게 실행됨_
 ### DAG 완료 테스트하기
 
 DAG의 모든 오퍼레이터가 예상한 대로 작동하려면 어떻게 해야할까요?  
