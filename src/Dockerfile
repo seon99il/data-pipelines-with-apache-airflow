@@ -12,3 +12,5 @@ RUN chown -R airflow: /opt/airflow/packages/airflow-movielens
 
 USER airflow
 RUN pip install --no-cache-dir --no-build-isolation /opt/airflow/packages/airflow-movielens
+
+# ENTRYPOINT ["tini", "--", "/entrypoint"] <-- 컨테이너가 시작할 때 실행할 명렁어

@@ -3,10 +3,11 @@ from typing import Tuple
 
 import requests
 from airflow.hooks.base import BaseHook
+from airflow.providers.http.hooks.http import HttpHook
 from requests import Session
 
 
-class MovielensHook(BaseHook):
+class MovielensHook(HttpHook):
     DEFAULT_HOST = 'host.docker.internal'
     DEFAULT_SCHEMA = 'http'
     DEFAULT_PORT = 5001

@@ -572,3 +572,116 @@ https://github.com/godatadriven/whirl
 - 컨테이너 접근 방식이 Airflow 배포에 어떻게 도움이 되는지 검토
 - 도커의 Airflow에서 컨테이너화된 태스크 실행학디
 - 컨테이너화된 DAG 개발에서 워크플로에 대한 전반적인 개요 수립
+
+### 다양한 오퍼레이터를 쓸 때 고려해야할 점
+
+> 여러 오퍼레이터가 있는 DAG는 복잡하기 때문에 만들고 관리하는 것이 어려움
+
+- `Chapter8 HttpOperator >> PythonOperator >> MysqlOperator`: 각 단계에서 서로 다른 오퍼레이터가 포함되므로 DAG의  
+  개발 및 유지 관리가 복잡해짐
+
+- Problem1: 각 오퍼레이터별로 인터페아스와 내부 동작에 익숙해져야 한다는 단점 (러닝 커브 증가)
+- 다양한 종속성이 충돌하는 환경: HttpOperator는 requests에 종속적이며, MySQLOperator는 mysql-connector-python에 종속적임  
+  → Airflow 설정 방식 때문에 모둔 종속성을 Airflow, 워커 자체에도 설치해야 함
+
+_또 한 잠재적인 보안 위험과 충돌이 발생할 수 있으며, 동일한 환경에 동일한 패키지를 여러 버전 설치할 수 없음_
+
+### 제네릭 오퍼레이터 지향하기
+
+> 일부에서는 하나의 제너릭 오퍼레이터를 사용하여 태스크를 실행하는 방식이 더 낫다고 주장하기도 함
+
+- **장점**
+    - 단일 오퍼레이터만 이해하면 되므로 러닝 커브가 낮아짐
+    - 오퍼레이터별로 종속성을 설치할 필요가 없음
+    - 오퍼레이터의 내부 동작이 단순해짐
+    - 단일 오퍼레이터에 필여한 하나의 Airflow 종속성 집합만 관리하면 됨
+
+각각에 대한 종속성 패키지를 설치하고 관리하지 않고도 동시에 다양한 태스크를 실행할 수 있는   
+제네릭 오퍼레이터는 컨테이너를 활용하면 가능함
+
+#### Docker Container with volumes
+
+```shell
+docker run --rm -v `pwd`/data:/data my-docker-image
+```
+
+### Airflow를 통해 태스크를 컨테이너로 실행
+
+> ex.) DockerOperator, KubernetesPodOperator
+
+Chapter8: DAG (DockerOperator >> DockerOperator >> DockerOperator)  
+_Docker 내에서 HttpContainer, PythonContainer, MySQLContainer를 사용_
+
+생각보다 복잡함, 컨테이너를 만들고 관리하는 작업이 추가됨
+
+Airflow에서는 태스크의 의존성, 실행 주기관리만을 담당하고 실제 테스크의 실행 로직을 분리할 수 있음 (or Spark)
+
+- **장점**
+    - **간편한 종속성 관리:**  
+      서로 다른 이미지를 생성하면 각 태스크에 필요한 종속성 충돌이 발생하지 않음
+    - **향상된 테스트 가능성:**  
+      Airflow DAG와는 별도로 개발 및 유지 관리할 수 있음
+    - **다양한 태스크 실행 시에도 동일한 접근방식을 제공:**  
+      동일한 인터페이스를 제공하며, 오퍼레이터 관련 문제를 줄여줌
+
+```Dockerfile
+FROM python:3.8-slim
+
+
+RUN python -m pip install click==7.1.1 requests==2.23.0
+
+COPY scripts/fetch_ratings.py /usr/local/bin/fetch-ratings
+RUN chmod +x /usr/local/bin/fetch-ratings
+
+# 컨테이너 내에서 fetch-ratings 명령어를 사용할 수 있도록 PATH 설정
+ENV PATH="/usr/local/bin:${PATH}"
+```
+
+```python
+fetch_ratings = DockerOperator(
+    task_id="fetch_ratings",
+    image="manning-airflow/movielens-fetch",
+    auto_remove="force",
+    mount_tmp_dir=False,
+    command=[
+        "fetch-ratings",
+        "--start_date",
+        "{{ds}}",
+        "--end_date",
+        "{{next_ds}}",
+        "--output_path",
+        "/data/ratings/{{ds}}.json",
+        "--user",
+        "airflow",
+        "--password",
+        "airflow",
+        "--host",
+        "http://host.docker.internal:5001",
+    ],
+    network_mode="airflow",
+    mounts=[
+        Mount(
+            source="/tmp/airflow/data",  # 호스트 경로
+            target="/data",  # 컨테이너 경로
+            type="bind",  # 바인딩 마운트 타입 지정
+        )
+    ],
+)
+```
+
+- `/var/run/docker.sock:/var/run/docker.sock`
+    - 도커 컨테이너 안에서 Localhost의 도커 데몬에 접근하기 위한 소켓 바인딩
+
+1. 필요한 이미지에 대한 도커 파일 생성 및 이미지를 빌드
+2. 도커 데몬은 개발 머신에 해당하는 이미지를 구축
+3. 도커 데몬은 이미지를 나중에 사용할 수 있도록 컨테이너 레지스트리에 게시
+4. 개발자는 빌드 이미지를 참조하여 DAG를 작성
+5. DAG 활성화된 후 Airflow는 DAG 실행을 시작하고 각 실행에 대한 DockerOperator 태스크를 스케줄함
+6. Airflow 워커는 DockerOperator 태스크를 선택하고 컨테이너 레지스트리에서 필요한 이미지를 로드
+7. 워커에 설치된 도커 데몬을 사용하여 해당 이미지와 인스로 컨테이너를 실행
+
+### 쿠버네티스에서 태스크 실행
+
+
+
+
